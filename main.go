@@ -17,7 +17,7 @@ type HackerNewsItem struct {
 	Points      int
 	User        string
 	CommentsURL string
-	CommentsNum int
+	// CommentsNum int
 }
 
 func main() {
@@ -88,13 +88,13 @@ func main() {
 				
 				commentsText := strings.TrimSpace(commentLink.Text())
 				if commentsText == "discuss" {
-					item.CommentsNum = 0
+					// item.CommentsNum = 0
 				} else {
 					commentsText = strings.TrimSuffix(commentsText, " comments")
 					commentsText = strings.TrimSuffix(commentsText, " comment")
-					commentsNum, err := strconv.Atoi(commentsText)
+					// commentsNum, err := strconv.Atoi(commentsText)
 					if err == nil {
-						item.CommentsNum = commentsNum
+						// item.CommentsNum = commentsNum
 					}
 				}
 			}
@@ -111,7 +111,7 @@ func main() {
 		} else {
 			fmt.Printf("Comments URL: N/A\n")
 		}
-		fmt.Printf("\nPoints: %d | User: %s | Comments: %d\n", item.Points, item.User, item.CommentsNum)
+		fmt.Printf("\nPoints: %d | User: %s", item.Points, item.User)// , item.CommentsNum)
 		fmt.Println()
 	}
 	
