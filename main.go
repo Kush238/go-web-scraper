@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,7 +18,7 @@ type HackerNewsItem struct {
 	Points      int
 	User        string
 	CommentsURL string
-	// CommentsNum int
+	CommentsNum int
 }
 
 func main() {
@@ -48,6 +49,8 @@ func main() {
 
 	var newsItems []HackerNewsItem
 
+	commentRegex := regexp.MustCompile(`(\d+)`)
+
 	doc.Find("tr.athing").Each(func(i int, s *goquery.Selection) {
 		item := HackerNewsItem{}
 
@@ -64,37 +67,35 @@ func main() {
 
 		subtext := s.Next().Find("td.subtext")
 		
-		pointsText := strings.TrimSpace(subtext.Find("span.score").Text())
+		scoreSpan := subtext.Find("span.score")
+		pointsText := strings.TrimSpace(scoreSpan.Text())
 		pointsText = strings.TrimSuffix(pointsText, " points")
 		points, err := strconv.Atoi(pointsText)
 		if err == nil {
 			item.Points = points
 		}
 
-		item.User = strings.TrimSpace(subtext.Find("a.hnuser").Text())
+		userLink := subtext.Find("a.hnuser")
+		item.User = strings.TrimSpace(userLink.Text())
 
-		var commentLink *goquery.Selection
-		subtext.Find("a").Each(func(i int, s *goquery.Selection) {
-			linkText := s.Text()
-			if strings.Contains(linkText, "comment") || linkText == "discuss" {
-				commentLink = s
-			}
-		})
+		commentLinks := subtext.Find("a")
+		commentLink := commentLinks.Last()
 		
-		if commentLink != nil {
-			commentsHref, exists := commentLink.Attr("href")
-			if exists {
-				item.CommentsURL = "https://news.ycombinator.com/" + commentsHref
-				
-				commentsText := strings.TrimSpace(commentLink.Text())
-				if commentsText == "discuss" {
-					// item.CommentsNum = 0
-				} else {
-					commentsText = strings.TrimSuffix(commentsText, " comments")
-					commentsText = strings.TrimSuffix(commentsText, " comment")
-					// commentsNum, err := strconv.Atoi(commentsText)
+		href, exists := commentLink.Attr("href")
+		if exists && strings.HasPrefix(href, "item?id=") {
+			item.CommentsURL = "https://news.ycombinator.com/" + href
+			
+			// Get the comment count
+			commentText := commentLink.Text()
+			if commentText == "discuss" {
+				item.CommentsNum = 0
+			} else if strings.Contains(commentText, "comment") {
+				// Extract just the number from the text
+				matches := commentRegex.FindStringSubmatch(commentText)
+				if len(matches) > 0 {
+					commentsNum, err := strconv.Atoi(matches[0])
 					if err == nil {
-						// item.CommentsNum = commentsNum
+						item.CommentsNum = commentsNum
 					}
 				}
 			}
@@ -111,7 +112,7 @@ func main() {
 		} else {
 			fmt.Printf("Comments URL: N/A\n")
 		}
-		fmt.Printf("\nPoints: %d | User: %s", item.Points, item.User)// , item.CommentsNum)
+		fmt.Printf("\nPoints: %d | User: %s | Comments: %d\n", item.Points, item.User, item.CommentsNum)
 		fmt.Println()
 	}
 	
